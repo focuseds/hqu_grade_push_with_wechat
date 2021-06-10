@@ -1,7 +1,4 @@
-import re
-import os
 import time
-import base64
 import random
 import logging
 import requests
