@@ -3,17 +3,17 @@ import os
 import time
 import base64
 import random
+import logging
 import requests
 from bs4 import BeautifulSoup
 
-def account():
-    random_str = ''
-    base_str = 'abcdef0123456789'
-    length = len(base_str) - 1
-    for i in range(13):
-        random_str += base_str[random.randint(0, length)]
-    acc = base64.b64encode(random_str.encode('utf-8'))
-    return str(acc, 'utf-8')
+# 记录日志
+logging.basicConfig(level=logging.DEBUG,
+                    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+                    datefmt='%Y-%m-%d %H:%M:%S %a',
+                    filename=r"./hqu-wx.log"
+                    )
+
 
 def login(stu_id, passwd, server_jang):
     """
@@ -35,7 +35,6 @@ def login(stu_id, passwd, server_jang):
     data = {
         '__VIEWSTATE': '/wEPDwUKMTA4NDA5NzM4MmRku0RGvNK93Xxw1mnuazL3gIxESNw=',
         '__EVENTVALIDATION': '/wEWBQKo6c+LBwLPmcHwCwKvruq2CALPyszgDQLU9qXZBs0kErg7VU1+WzexjUqGv2413Hgy',
-        'account': account(),
         'UserName': stu_id,
         'UserPass': passwd,
         'ButLogin': '登录'
@@ -61,19 +60,19 @@ def login(stu_id, passwd, server_jang):
     symbol = '|'
     mark_data = marks.text
     length = len(mark_data)
-    with open('cache.json') as f:
+    # 根据response大小判断成绩是否更新
+    with open('.cache') as f:
         cache = f.readline()
     if cache == str(length):
+        logging.info("成绩未更新")
         print(time.ctime() + "：成绩未更新")
-        with open('log.log', 'a+') as log:
-            log.write(time.ctime() + " have no new grade.\n")
     else:
+        logging.info("成绩已更新")
         print(time.ctime() + "：成绩已更新")
-        with open('log.log', 'a+') as log:
-            log.write(time.ctime() + " new grade update.\n")
-        with open('cache.json', 'w') as f:
+        with open('.cache', 'w') as f:
             f.write(str(length))
         mark_data = mark_data.split('||')
+        # 以markdown形式返回到server酱
         head = '|-|-|-|-|-|-|-|-|-|'
         form = ''
         for index, item in enumerate(mark_data):
@@ -87,23 +86,29 @@ def login(stu_id, passwd, server_jang):
                     form += '\n'
                 form += item
                 form += '\n'
-        gpa_data = '<div><strong>' + gpa.text + '</strong></div>'
+        gpa_data = gpa.text
         form += gpa_data
-        get_data = {"text":"新成绩提醒.", "desp":form}
+        get_data = {"text": "新成绩提醒.", "desp": form}
         server = requests.get(server_jang, get_data)
-        # sends_mail()
     return 0
 
+
 if __name__ == '__main__':
-    print
+    logging.info("开始程序...")
+    print()
     NOTICE = """
-HQU成绩查询+微信推送工具v1.02(20200830)
+HQU成绩查询+微信推送工具v1.10(20210610)
 
 使用方法：
     1. 使用前请将设备连接HQU校园网
     2. 密码选项:
         ①直接运行，运行过程中输入学号、密码
-        ②通过在本程序同级目录下创建secret.txt文件：按行填写学号、密码和server酱的webhook地址（看第三条）
+        ②通过在本程序同级目录下创建config.txt文件：逐行填写学号、密码和server酱的webhook地址（看第三条）
+        ③config.txt样例：
+            1725131038
+            password
+            https://sc.ftqq.com/SCU76542Taf41211***********505e1498413ef43.send
+        ④技术人员请看：新版server酱已上线，可通过企业微信推送给多人，并可以在微信接受企业微信机器人消息，只需替换webhook地址即可（替换前请注意处理推送内容中的敏感信息）
     3. server酱注册
         ①打开：http://sc.ftqq.com/
         ②页面右上方有”登入“选项，点击进入，进入后使用github账号注册
@@ -111,7 +116,7 @@ HQU成绩查询+微信推送工具v1.02(20200830)
     4. 本程序只供HQU在校学生学习交流使用，请勿用作非法用途。因本人水平有限，如有bug且愿意交流者可联系mye_mails@126.com
     5. 其他：
         ①成绩查询随机时间1分钟~5分钟查询一次
-        ②不要对他人泄露secret.txt中的隐私信息
+        ②不要对他人泄露config.txt中的隐私信息
         ③图标来自：https://www.iconfont.cn/search/index?searchType=icon&q=%E5%AD%A6%E6%A0%A1
         ④该应用程序需要后台常驻（不能关闭程序界面），或联系我获取服务器版本
         ⑤推送消息包含的信息：
@@ -124,11 +129,10 @@ code by xuh, HQUCST
     print(NOTICE)
     # 文件读取密码
     try:
-        with open('secret.txt', 'r') as f:
+        with open('config.txt', 'r') as f:
             stu_info = [line.strip() for line in f]
     except BaseException as identifier:
-        print('请在本程序同级目录下创建secret.txt文件，并按要求填写学号、密码和webhook')
-
+        print('请在本程序同级目录下创建config.txt文件，并按要求填写学号、密码和webhook')
 
     if len(stu_info):
         try:
@@ -136,20 +140,19 @@ code by xuh, HQUCST
             passwd = stu_info[1]
             server_jang = stu_info[2]
         except IndexError as identifier:
-            print("请在secret.txt配置正确的账号密码和webhook！")    
+            print("请在config.txt配置正确的账号密码和webhook！")
     else:
         stu_id = input("请输入学号：").strip()
         passwd = input("请输入教务处密码：").strip()
         server_jang = input("请输入server酱webhook链接：").strip()
 
-    print
-
-    while(1):
+    while (True):
         try:
             login(stu_id, passwd, server_jang)
         except BaseException as identifier:
             print(identifier)
+            logging.info(identifier)
+            logging.info("请使用校园网，或账号密码错误！")
             print("请使用校园网，或账号密码错误！")
-        # 5分钟查询一次
-        time.sleep(random.randint(60,300))
-    # sends_mail()
+        # 1-5分钟查询一次
+        time.sleep(random.randint(60, 300))
