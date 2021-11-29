@@ -2,3 +2,4 @@ build/
 _pycache_/
 dist/
 HQU成绩查询+微信推送工具*.spec
+*.log
