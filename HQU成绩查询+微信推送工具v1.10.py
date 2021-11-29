@@ -102,7 +102,7 @@ HQU成绩查询+微信推送工具v1.10(20210610)
         ①直接运行，运行过程中输入学号、密码
         ②通过在本程序同级目录下创建config.txt文件：逐行填写学号、密码和server酱的webhook地址（看第三条）
         ③config.txt样例：
-            1725131038
+            17251310**
             password
             https://sc.ftqq.com/SCU76542Taf41211***********505e1498413ef43.send
         ④技术人员请看：新版server酱已上线，可通过企业微信推送给多人，并可以在微信接受企业微信机器人消息，只需替换webhook地址即可（替换前请注意处理推送内容中的敏感信息）
@@ -124,6 +124,9 @@ HQU成绩查询+微信推送工具v1.10(20210610)
 code by xuh, HQUCST
     """
     print(NOTICE)
+    stu_id = None
+    passwd = None
+    server_jang = None
     # 文件读取密码
     try:
         with open('config.txt', 'r') as f:
@@ -143,8 +146,10 @@ code by xuh, HQUCST
         passwd = input("请输入教务处密码：").strip()
         server_jang = input("请输入server酱webhook链接：").strip()
 
-    while (True):
+    while True:
         try:
+            if not stu_id and not passwd and not server_jang:
+                continue
             login(stu_id, passwd, server_jang)
         except BaseException as identifier:
             print(identifier)
